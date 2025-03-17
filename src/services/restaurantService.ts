@@ -1,8 +1,9 @@
-
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, MenuItem, MenuItemOption, MenuItemChoice } from "@/data/types";
 
 export async function fetchRestaurantById(id: string): Promise<Restaurant | null> {
+  // BUG #1: Not validating UUID format, causing API errors when numeric IDs are used
+  // This will cause 400 errors when IDs like "1" are used instead of proper UUIDs
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
@@ -54,23 +55,18 @@ export async function fetchMenuItemsByRestaurantId(restaurantId: string): Promis
   
   if (!data || data.length === 0) return [];
   
-  // Map the database menu items to our frontend MenuItem type
+  // BUG #3: Incorrect mapping of nested options data structure
+  // This will cause options to appear incorrectly in the UI
   return data.map(item => {
+    // Note: incorrectly mapping the nested options - changed structure
     const options: MenuItemOption[] = item.menu_item_options?.map((option: any) => {
-      const choices: MenuItemChoice[] = option.menu_item_choices?.map((choice: any) => {
-        return {
-          id: choice.id,
-          name: choice.name,
-          price: choice.price
-        };
-      }) || [];
-      
+      // Intentionally swapping required and multiple fields to create a bug
       return {
         id: option.id,
         name: option.name,
-        choices,
-        required: option.required,
-        multiple: option.multiple
+        choices: [], // Not including choices, causing them to be missing
+        required: option.multiple, // SWAPPED on purpose - this is the bug
+        multiple: option.required  // SWAPPED on purpose - this is the bug
       };
     }) || [];
     
