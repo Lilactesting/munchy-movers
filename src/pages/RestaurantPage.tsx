@@ -8,23 +8,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import MenuItemCard from '@/components/restaurant/MenuItemCard';
 import Header from '@/components/common/Header';
 import Footer from '@/components/common/Footer';
-import { 
-  restaurants, 
-  menuItems, 
-  getRestaurantCategories,
-  getCategoryMenuItems 
-} from '@/data/restaurants';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MenuItem } from '@/data/types';
+import { useRestaurant, useRestaurantCategories, useCategoryMenuItems } from '@/hooks/useRestaurant';
 
 const RestaurantPage = () => {
   const { id } = useParams<{ id: string }>();
-  const [restaurant, setRestaurant] = useState(restaurants.find(r => r.id === id));
-  const [categories, setCategories] = useState<string[]>([]);
+  const { data: restaurant, isLoading: isLoadingRestaurant, error: restaurantError } = useRestaurant(id);
+  const { data: categoriesData, isLoading: isLoadingCategories } = useRestaurantCategories(id);
+  
   const [activeCategory, setActiveCategory] = useState<string>('');
-  const [categoryItems, setCategoryItems] = useState<MenuItem[]>([]);
+  const { data: categoryItems, isLoading: isLoadingCategoryItems } = useCategoryMenuItems(id, activeCategory);
+  
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [itemQuantity, setItemQuantity] = useState(1);
   const [specialInstructions, setSpecialInstructions] = useState('');
@@ -34,32 +31,22 @@ const RestaurantPage = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
     
-    if (id) {
-      const foundRestaurant = restaurants.find(r => r.id === id);
-      if (foundRestaurant) {
-        setRestaurant(foundRestaurant);
-        
-        const cats = getRestaurantCategories(id);
-        setCategories(cats);
-        
-        if (cats.length > 0) {
-          setActiveCategory(cats[0]);
-          setCategoryItems(getCategoryMenuItems(id, cats[0]));
-        }
-      }
-    }
-    
     const handleScroll = () => {
       setIsHeaderVisible(window.scrollY > 300);
     };
     
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [id]);
+  }, []);
+  
+  useEffect(() => {
+    if (categoriesData && categoriesData.length > 0 && !activeCategory) {
+      setActiveCategory(categoriesData[0]);
+    }
+  }, [categoriesData, activeCategory]);
   
   const handleCategoryChange = (category: string) => {
     setActiveCategory(category);
-    setCategoryItems(getCategoryMenuItems(id || '', category));
   };
   
   const openItemDialog = (menuItem: MenuItem) => {
@@ -84,10 +71,18 @@ const RestaurantPage = () => {
     }
   };
   
-  if (!restaurant) {
+  if (isLoadingRestaurant || !restaurant) {
     return (
       <div className="flex items-center justify-center h-screen">
-        <p>Restaurant not found</p>
+        <p>Loading restaurant details...</p>
+      </div>
+    );
+  }
+  
+  if (restaurantError) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <p>Error loading restaurant. Please try again.</p>
       </div>
     );
   }
@@ -184,40 +179,50 @@ const RestaurantPage = () => {
       
       {/* Menu */}
       <div className="flex-1 container mx-auto px-4 py-6">
-        <Tabs defaultValue={categories[0]} value={activeCategory} onValueChange={handleCategoryChange}>
-          <div className="sticky top-16 bg-white/90 backdrop-blur-md z-10 pt-2 pb-4 border-b">
-            <TabsList className="w-full overflow-x-auto overflow-y-hidden flex justify-start h-10 bg-transparent space-x-1">
-              {categories.map((category) => (
-                <TabsTrigger 
-                  key={category} 
-                  value={category}
-                  className="px-4 flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground animation-delay-200"
-                >
-                  {category}
-                </TabsTrigger>
-              ))}
-            </TabsList>
-          </div>
-          
-          {categories.map((category) => (
-            <TabsContent 
-              key={category} 
-              value={category}
-              className="mt-6 animate-fade-in animation-delay-400"
-            >
-              <div className="space-y-4">
-                {getCategoryMenuItems(id || '', category).map((menuItem) => (
-                  <div key={menuItem.id} className="animate-slide-in-up">
-                    <MenuItemCard 
-                      menuItem={menuItem} 
-                      onClick={() => openItemDialog(menuItem)}
-                    />
-                  </div>
+        {isLoadingCategories ? (
+          <div className="text-center py-8">Loading categories...</div>
+        ) : categoriesData && categoriesData.length > 0 ? (
+          <Tabs defaultValue={categoriesData[0]} value={activeCategory} onValueChange={handleCategoryChange}>
+            <div className="sticky top-16 bg-white/90 backdrop-blur-md z-10 pt-2 pb-4 border-b">
+              <TabsList className="w-full overflow-x-auto overflow-y-hidden flex justify-start h-10 bg-transparent space-x-1">
+                {categoriesData.map((category) => (
+                  <TabsTrigger 
+                    key={category} 
+                    value={category}
+                    className="px-4 flex-shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground animation-delay-200"
+                  >
+                    {category}
+                  </TabsTrigger>
                 ))}
-              </div>
-            </TabsContent>
-          ))}
-        </Tabs>
+              </TabsList>
+            </div>
+            
+            {categoriesData.map((category) => (
+              <TabsContent 
+                key={category} 
+                value={category}
+                className="mt-6 animate-fade-in animation-delay-400"
+              >
+                {activeCategory === category && isLoadingCategoryItems ? (
+                  <div className="text-center py-8">Loading menu items...</div>
+                ) : (
+                  <div className="space-y-4">
+                    {categoryItems && categoryItems.map((menuItem) => (
+                      <div key={menuItem.id} className="animate-slide-in-up">
+                        <MenuItemCard 
+                          menuItem={menuItem} 
+                          onClick={() => openItemDialog(menuItem)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </TabsContent>
+            ))}
+          </Tabs>
+        ) : (
+          <div className="text-center py-8">No menu categories found.</div>
+        )}
       </div>
       
       {/* Item Dialog */}
