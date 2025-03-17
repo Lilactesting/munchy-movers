@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Star, Clock, DollarSign, MapPin, ChevronRight, Percent, Tag } from 'lucide-react';
@@ -13,14 +12,16 @@ import { formatCurrency } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { MenuItem } from '@/data/types';
 import { useRestaurant, useRestaurantCategories, useCategoryMenuItems } from '@/hooks/useRestaurant';
+import RestaurantErrorState from '@/components/restaurant/RestaurantErrorState';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const RestaurantPage = () => {
   const { id } = useParams<{ id: string }>();
   const { data: restaurant, isLoading: isLoadingRestaurant, error: restaurantError } = useRestaurant(id);
-  const { data: categoriesData, isLoading: isLoadingCategories } = useRestaurantCategories(id);
+  const { data: categoriesData, isLoading: isLoadingCategories, error: categoriesError } = useRestaurantCategories(id);
   
   const [activeCategory, setActiveCategory] = useState<string>('');
-  const { data: categoryItems, isLoading: isLoadingCategoryItems } = useCategoryMenuItems(id, activeCategory);
+  const { data: categoryItems, isLoading: isLoadingCategoryItems, error: categoryItemsError } = useCategoryMenuItems(id, activeCategory);
   
   const [selectedMenuItem, setSelectedMenuItem] = useState<MenuItem | null>(null);
   const [itemQuantity, setItemQuantity] = useState(1);
@@ -71,18 +72,34 @@ const RestaurantPage = () => {
     }
   };
   
-  if (isLoadingRestaurant || !restaurant) {
+  if (restaurantError) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Loading restaurant details...</p>
+      <div>
+        <Header />
+        <RestaurantErrorState message="We couldn't load this restaurant. Please check the restaurant ID or try again later." />
+        <Footer />
       </div>
     );
   }
   
-  if (restaurantError) {
+  if (isLoadingRestaurant || !restaurant) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <p>Error loading restaurant. Please try again.</p>
+      <div className="min-h-screen flex flex-col">
+        <Header />
+        <div className="h-64 md:h-80 w-full relative mt-16">
+          <Skeleton className="w-full h-full" />
+        </div>
+        <div className="container mx-auto px-4 py-6">
+          <Skeleton className="h-10 w-48 mb-2" />
+          <Skeleton className="h-4 w-full max-w-2xl mb-4" />
+          <div className="flex flex-wrap gap-4 mb-2">
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-6 w-24" />
+            <Skeleton className="h-6 w-24" />
+          </div>
+          <Skeleton className="h-4 w-64 mb-4" />
+        </div>
+        <Footer />
       </div>
     );
   }
@@ -179,8 +196,14 @@ const RestaurantPage = () => {
       
       {/* Menu */}
       <div className="flex-1 container mx-auto px-4 py-6">
-        {isLoadingCategories ? (
-          <div className="text-center py-8">Loading categories...</div>
+        {categoriesError ? (
+          <RestaurantErrorState message="We couldn't load the menu categories. Please try again." />
+        ) : isLoadingCategories ? (
+          <div className="space-y-4">
+            <Skeleton className="h-10 w-full" />
+            <Skeleton className="h-32 w-full" />
+            <Skeleton className="h-32 w-full" />
+          </div>
         ) : categoriesData && categoriesData.length > 0 ? (
           <Tabs defaultValue={categoriesData[0]} value={activeCategory} onValueChange={handleCategoryChange}>
             <div className="sticky top-16 bg-white/90 backdrop-blur-md z-10 pt-2 pb-4 border-b">
@@ -203,8 +226,16 @@ const RestaurantPage = () => {
                 value={category}
                 className="mt-6 animate-fade-in animation-delay-400"
               >
-                {activeCategory === category && isLoadingCategoryItems ? (
-                  <div className="text-center py-8">Loading menu items...</div>
+                {activeCategory === category && categoryItemsError ? (
+                  <div className="p-4 bg-red-50 rounded-lg text-red-800 text-center">
+                    <p>Failed to load menu items for this category. Please try another category.</p>
+                  </div>
+                ) : activeCategory === category && isLoadingCategoryItems ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {categoryItems && categoryItems.map((menuItem) => (
@@ -249,7 +280,6 @@ const RestaurantPage = () => {
               <div className="py-4">
                 <p className="font-medium mb-4">{formatCurrency(selectedMenuItem.price)}</p>
                 
-                {/* Quantity selector */}
                 <div className="flex items-center justify-between mb-6">
                   <p className="font-medium">Quantity</p>
                   <div className="flex items-center border rounded-md">
@@ -273,7 +303,6 @@ const RestaurantPage = () => {
                   </div>
                 </div>
                 
-                {/* Special instructions */}
                 <div className="mb-6">
                   <p className="font-medium mb-2">Special instructions</p>
                   <textarea 

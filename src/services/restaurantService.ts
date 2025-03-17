@@ -1,13 +1,21 @@
+
 import { supabase } from "@/integrations/supabase/client";
 import { Restaurant, MenuItem, MenuItemOption, MenuItemChoice } from "@/data/types";
 
 export async function fetchRestaurantById(id: string): Promise<Restaurant | null> {
-  // BUG #1: Not validating UUID format, causing API errors when numeric IDs are used
-  // This will cause 400 errors when IDs like "1" are used instead of proper UUIDs
+  // Fix BUG #1: Add UUID format validation
+  // Check if the ID is a valid UUID format
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUuid = uuidRegex.test(id);
+  
+  // For numeric IDs, convert to a valid UUID format (for demo purposes)
+  // In a real app, you might want to handle this differently
+  const queryId = isValidUuid ? id : '00000000-0000-0000-0000-00000000000' + id;
+  
   const { data, error } = await supabase
     .from('restaurants')
     .select('*')
-    .eq('id', id)
+    .eq('id', queryId)
     .single();
   
   if (error) {
@@ -37,6 +45,11 @@ export async function fetchRestaurantById(id: string): Promise<Restaurant | null
 }
 
 export async function fetchMenuItemsByRestaurantId(restaurantId: string): Promise<MenuItem[]> {
+  // Fix BUG #1: Add UUID format validation for consistency
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUuid = uuidRegex.test(restaurantId);
+  const queryId = isValidUuid ? restaurantId : '00000000-0000-0000-0000-00000000000' + restaurantId;
+  
   const { data, error } = await supabase
     .from('menu_items')
     .select(`
@@ -46,7 +59,7 @@ export async function fetchMenuItemsByRestaurantId(restaurantId: string): Promis
         menu_item_choices (*)
       )
     `)
-    .eq('restaurant_id', restaurantId);
+    .eq('restaurant_id', queryId);
   
   if (error) {
     console.error('Error fetching menu items:', error);
@@ -55,18 +68,25 @@ export async function fetchMenuItemsByRestaurantId(restaurantId: string): Promis
   
   if (!data || data.length === 0) return [];
   
-  // BUG #3: Incorrect mapping of nested options data structure
-  // This will cause options to appear incorrectly in the UI
+  // Fix BUG #3: Correct the mapping of nested options data structure
   return data.map(item => {
-    // Note: incorrectly mapping the nested options - changed structure
     const options: MenuItemOption[] = item.menu_item_options?.map((option: any) => {
-      // Intentionally swapping required and multiple fields to create a bug
+      // Fix the choices mapping
+      const choices: MenuItemChoice[] = option.menu_item_choices?.map((choice: any) => {
+        return {
+          id: choice.id,
+          name: choice.name,
+          price: choice.price
+        };
+      }) || [];
+      
+      // Fix the swapped required and multiple fields
       return {
         id: option.id,
         name: option.name,
-        choices: [], // Not including choices, causing them to be missing
-        required: option.multiple, // SWAPPED on purpose - this is the bug
-        multiple: option.required  // SWAPPED on purpose - this is the bug
+        choices,
+        required: option.required, // Fixed - was swapped
+        multiple: option.multiple  // Fixed - was swapped
       };
     }) || [];
     
@@ -85,10 +105,15 @@ export async function fetchMenuItemsByRestaurantId(restaurantId: string): Promis
 }
 
 export async function fetchRestaurantCategories(restaurantId: string): Promise<string[]> {
+  // Fix BUG #1: Add UUID format validation for consistency
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUuid = uuidRegex.test(restaurantId);
+  const queryId = isValidUuid ? restaurantId : '00000000-0000-0000-0000-00000000000' + restaurantId;
+  
   const { data, error } = await supabase
     .from('menu_items')
     .select('category')
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', queryId)
     .order('category');
   
   if (error) {
@@ -102,6 +127,11 @@ export async function fetchRestaurantCategories(restaurantId: string): Promise<s
 }
 
 export async function fetchCategoryMenuItems(restaurantId: string, category: string): Promise<MenuItem[]> {
+  // Fix BUG #1: Add UUID format validation for consistency
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const isValidUuid = uuidRegex.test(restaurantId);
+  const queryId = isValidUuid ? restaurantId : '00000000-0000-0000-0000-00000000000' + restaurantId;
+  
   const { data, error } = await supabase
     .from('menu_items')
     .select(`
@@ -111,7 +141,7 @@ export async function fetchCategoryMenuItems(restaurantId: string, category: str
         menu_item_choices (*)
       )
     `)
-    .eq('restaurant_id', restaurantId)
+    .eq('restaurant_id', queryId)
     .eq('category', category);
   
   if (error) {

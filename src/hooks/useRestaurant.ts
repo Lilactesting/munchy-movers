@@ -1,15 +1,20 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { fetchRestaurantById, fetchMenuItemsByRestaurantId, fetchRestaurantCategories } from "@/services/restaurantService";
+import { toast } from "sonner";
 
-// BUG #2: Missing error handling in React Query hooks
-// This will cause the UI to show loading indefinitely on error with no user feedback
+// Fix BUG #2: Add proper error handling in React Query hooks
 export function useRestaurant(id: string | undefined) {
   return useQuery({
     queryKey: ['restaurant', id],
     queryFn: () => fetchRestaurantById(id || ''),
     enabled: !!id,
-    // Missing retry, error handling, and staleTime config
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: (error) => {
+      toast.error("Failed to load restaurant details");
+      console.error("Restaurant query error:", error);
+    }
   });
 }
 
@@ -18,7 +23,12 @@ export function useMenuItems(restaurantId: string | undefined) {
     queryKey: ['menuItems', restaurantId],
     queryFn: () => fetchMenuItemsByRestaurantId(restaurantId || ''),
     enabled: !!restaurantId,
-    // Missing retry, error handling, and staleTime config
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: (error) => {
+      toast.error("Failed to load menu items");
+      console.error("Menu items query error:", error);
+    }
   });
 }
 
@@ -27,7 +37,12 @@ export function useRestaurantCategories(restaurantId: string | undefined) {
     queryKey: ['restaurantCategories', restaurantId],
     queryFn: () => fetchRestaurantCategories(restaurantId || ''),
     enabled: !!restaurantId,
-    // Missing retry, error handling, and staleTime config
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: (error) => {
+      toast.error("Failed to load menu categories");
+      console.error("Categories query error:", error);
+    }
   });
 }
 
@@ -37,6 +52,11 @@ export function useCategoryMenuItems(restaurantId: string | undefined, category:
     queryFn: () => import('@/services/restaurantService')
       .then(module => module.fetchCategoryMenuItems(restaurantId || '', category)),
     enabled: !!restaurantId && !!category,
-    // Missing retry, error handling, and staleTime config
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 1,
+    onError: (error) => {
+      toast.error(`Failed to load ${category} menu items`);
+      console.error("Category menu items query error:", error);
+    }
   });
 }
