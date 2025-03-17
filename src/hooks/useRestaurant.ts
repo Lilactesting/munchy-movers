@@ -14,11 +14,12 @@ export function useRestaurant(id: string | undefined) {
     meta: {
       errorMessage: "Failed to load restaurant details"
     },
-    onSettled: (data, error) => {
-      if (error) {
-        toast.error("Failed to load restaurant details");
-        console.error("Restaurant query error:", error);
-      }
+    onSuccess: (data) => {
+      console.log("Restaurant data loaded successfully:", data?.name);
+    },
+    onError: (error) => {
+      toast.error("Failed to load restaurant details");
+      console.error("Restaurant query error:", error);
     }
   });
 }
@@ -34,11 +35,12 @@ export function useMenuItems(restaurantId: string | undefined) {
     meta: {
       errorMessage: "Failed to load menu items"
     },
-    onSettled: (data, error) => {
-      if (error) {
-        toast.error("Failed to load menu items");
-        console.error("Menu items query error:", error);
-      }
+    onSuccess: (data) => {
+      console.log(`Loaded ${data.length} menu items`);
+    },
+    onError: (error) => {
+      toast.error("Failed to load menu items");
+      console.error("Menu items query error:", error);
     }
   });
 }
@@ -54,11 +56,12 @@ export function useRestaurantCategories(restaurantId: string | undefined) {
     meta: {
       errorMessage: "Failed to load menu categories"
     },
-    onSettled: (data, error) => {
-      if (error) {
-        toast.error("Failed to load menu categories");
-        console.error("Categories query error:", error);
-      }
+    onSuccess: (data) => {
+      console.log(`Loaded ${data.length} categories`);
+    },
+    onError: (error) => {
+      toast.error("Failed to load menu categories");
+      console.error("Categories query error:", error);
     }
   });
 }
@@ -75,11 +78,12 @@ export function useCategoryMenuItems(restaurantId: string | undefined, category:
     meta: {
       errorMessage: `Failed to load ${category} menu items`
     },
-    onSettled: (data, error) => {
-      if (error) {
-        toast.error(`Failed to load ${category} menu items`);
-        console.error("Category menu items query error:", error);
-      }
+    onSuccess: (data) => {
+      console.log(`Loaded ${data.length} items for category ${category}`);
+    },
+    onError: (error) => {
+      toast.error(`Failed to load ${category} menu items`);
+      console.error("Category menu items query error:", error);
     }
   });
 }

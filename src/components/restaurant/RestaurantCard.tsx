@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Restaurant } from '@/data/types';
 import { Card } from '@/components/ui/card';
-import { Star, Clock, ChevronRight } from 'lucide-react';
+import { Star, Clock, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface RestaurantCardProps {
@@ -12,6 +12,13 @@ interface RestaurantCardProps {
 }
 
 const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, featured }) => {
+  const [imageError, setImageError] = useState(false);
+
+  const handleImageError = () => {
+    setImageError(true);
+    console.error(`Failed to load image for restaurant: ${restaurant.name}`);
+  };
+
   return (
     <Link 
       to={`/restaurant/${restaurant.id}`}
@@ -25,11 +32,18 @@ const RestaurantCard: React.FC<RestaurantCardProps> = ({ restaurant, featured })
         }`}
       >
         <div className="relative">
-          <img 
-            src={restaurant.imageUrl} 
-            alt={restaurant.name}
-            className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+          {!imageError ? (
+            <img 
+              src={restaurant.imageUrl} 
+              alt={restaurant.name}
+              className="w-full h-48 object-cover transition-transform duration-500 group-hover:scale-105"
+              onError={handleImageError}
+            />
+          ) : (
+            <div className="w-full h-48 flex items-center justify-center bg-slate-100 text-slate-400">
+              <ImageOff size={32} />
+            </div>
+          )}
           
           {restaurant.isOpen ? (
             <Badge variant="secondary" className="absolute top-3 left-3">

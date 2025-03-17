@@ -1,9 +1,9 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { MenuItem } from '@/data/types';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, ImageOff } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/contexts/CartContext';
 import { formatCurrency } from '@/lib/utils';
@@ -16,11 +16,16 @@ interface MenuItemCardProps {
 
 const MenuItemCard: React.FC<MenuItemCardProps> = ({ menuItem, compact = false, onClick }) => {
   const { addToCart } = useCart();
+  const [imageError, setImageError] = useState(false);
   
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(menuItem, 1);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
   };
   
   return (
@@ -31,12 +36,19 @@ const MenuItemCard: React.FC<MenuItemCardProps> = ({ menuItem, compact = false, 
       onClick={onClick}
     >
       <div className="flex flex-col md:flex-row">
-        <div className={`${compact ? 'md:w-20 md:h-20' : 'md:w-40 md:h-auto'} relative`}>
-          <img 
-            src={menuItem.imageUrl} 
-            alt={menuItem.name}
-            className={`w-full ${compact ? 'h-32 md:h-20' : 'h-48 md:h-full'} object-cover transition-transform duration-500 group-hover:scale-105`}
-          />
+        <div className={`${compact ? 'md:w-20 md:h-20' : 'md:w-40 md:h-auto'} relative bg-muted`}>
+          {!imageError ? (
+            <img 
+              src={menuItem.imageUrl} 
+              alt={menuItem.name}
+              className={`w-full ${compact ? 'h-32 md:h-20' : 'h-48 md:h-full'} object-cover transition-transform duration-500 group-hover:scale-105`}
+              onError={handleImageError}
+            />
+          ) : (
+            <div className={`w-full ${compact ? 'h-32 md:h-20' : 'h-48 md:h-full'} flex items-center justify-center bg-slate-100 text-slate-400`}>
+              <ImageOff size={24} />
+            </div>
+          )}
           
           {menuItem.popular && (
             <Badge variant="default" className="absolute top-2 left-2 bg-primary">
